@@ -1,0 +1,15 @@
+[project]
+name = "gcp-logger"
+version = "0.1.0"
+description = "Lightweight, production-ready logging package for Google Cloud Platform applications"
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+    "loguru>=0.7.3",
+    "requests>=2.32.4",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4.1",
+]
