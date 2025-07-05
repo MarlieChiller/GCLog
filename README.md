@@ -1,15 +1,15 @@
-# GCP Logger
+# GCLog
 
-[![Tests](https://github.com/USERNAME/gcp-logger/workflows/Tests/badge.svg)](https://github.com/USERNAME/gcp-logger/actions)
-[![codecov](https://codecov.io/gh/USERNAME/gcp-logger/branch/main/graph/badge.svg)](https://codecov.io/gh/USERNAME/gcp-logger)
+[![Tests](https://github.com/MarlieChiller/gcp_logger/workflows/Tests/badge.svg)](https://github.com/MarlieChiller/gcp_logger/actions)
+[![codecov](https://codecov.io/gh/MarlieChiller/GCLog/graph/badge.svg?token=O1ZHUDHDYU)](https://codecov.io/gh/MarlieChiller/GCLog)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
-[![PyPI version](https://badge.fury.io/py/gcp-logger.svg)](https://badge.fury.io/py/gcp-logger)
+[![PyPI version](https://badge.fury.io/py/gclog.svg)](https://badge.fury.io/py/gclog)
 
 A lightweight, production-ready logging package for Google Cloud Platform applications. Built on top of [loguru](https://github.com/Delgan/loguru), it automatically detects GCP environments and provides structured JSON logging for cloud services while maintaining human-readable logs for local development.
 
 ## Why?
 
-I found that my logs in a fastapi app were using the Google Cloud Platforms' (GCP) default log level irrespective of the
+I found that my logs in a fastapi app were using the Google Cloud Platforms' default log level irrespective of the
 actual log level that was being emitted by the app itself. This meant my GCP logs were reporting things incorrectly, 
 decreasing visibility and making it harder to debug issues. This issue came up time and again, and I didn't want to have 
 to write a log formatter for every service, so I wrote this package to fix this problem once and for all.
@@ -35,13 +35,13 @@ to write a log formatter for every service, so I wrote this package to fix this 
 ## Installation
 
 ```bash
-pip install gcp-logger
+pip install gclog
 ```
 
 ## Quick Start
 
 ```python
-from gcp_logger import get_logger
+from gclog import get_logger
 
 # Get a configured logger instance
 logger = get_logger()
@@ -95,7 +95,7 @@ export LOG_LEVEL=INFO
 
 Or pass it directly:
 ```python
-from gcp_logger import GCPLogger
+from gclog import GCPLogger
 
 logger = GCPLogger(level="DEBUG")
 ```
@@ -115,7 +115,7 @@ logger.info("User action", extra={
 
 ### Manual Environment Detection
 ```python
-from gcp_logger import is_running_on_cloud
+from gclog import is_running_on_cloud
 
 if is_running_on_cloud():
     print("Running on GCP!")
@@ -125,7 +125,7 @@ else:
 
 ### Direct Logger Configuration
 ```python
-from gcp_logger import GCPLogger
+from gclog import GCPLogger
 
 # This returns the global loguru logger instance
 logger = GCPLogger(level="WARNING")
@@ -176,6 +176,11 @@ pytest tests/ -v
 MIT License - see LICENSE file for details.
 
 ## Changelog
+
+### v0.1.1
+- **feat**: Add conditional extra data formatting for cleaner logs
+- **improvement**: Extra data section only appears when data is present
+- **docs**: Update examples and documentation
 
 ### v0.1.0
 - Initial release

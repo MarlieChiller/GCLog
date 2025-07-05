@@ -7,13 +7,13 @@ from unittest.mock import patch, MagicMock, Mock
 import pytest
 import requests
 
-from gcp_logger import (
+from gclog import (
+    get_logger,
+    GCPLogger,
     is_running_on_cloud,
     serialize,
     gcp_sink,
     local_sink,
-    GCPLogger,
-    get_logger,
 )
 
 
@@ -287,7 +287,7 @@ def test_local_sink_stream_selection(level_no, expected_stream):
 # Test GCPLogger class
 def test_singleton_behavior():
     """Test that GCPLogger implements singleton pattern."""
-    with patch("gcp_logger.logger") as mock_logger:
+    with patch("gclog.gclog.logger") as mock_logger:
         logger1 = GCPLogger()
         logger2 = GCPLogger()
 
@@ -303,10 +303,10 @@ def test_singleton_behavior():
         (False, "local_sink"),
     ],
 )
-@patch("gcp_logger.logger")
+@patch("gclog.gclog.logger")
 def test_logger_configuration_by_environment(mock_logger, is_cloud, expected_sink):
     """Test logger configuration based on cloud environment."""
-    with patch("gcp_logger.is_running_on_cloud") as mock_is_cloud:
+    with patch("gclog.gclog.is_running_on_cloud") as mock_is_cloud:
         mock_is_cloud.return_value = is_cloud
 
         GCPLogger()
@@ -323,8 +323,8 @@ def test_logger_configuration_by_environment(mock_logger, is_cloud, expected_sin
             assert kwargs["diagnose"] is True
 
 
-@patch("gcp_logger.is_running_on_cloud")
-@patch("gcp_logger.logger")
+@patch("gclog.gclog.is_running_on_cloud")
+@patch("gclog.gclog.logger")
 def test_configuration_failure(mock_logger, mock_is_cloud):
     """Test logger configuration failure handling."""
     mock_is_cloud.return_value = False
@@ -341,8 +341,8 @@ def test_configuration_failure(mock_logger, mock_is_cloud):
 def test_custom_log_level(log_level):
     """Test logger with different custom log levels."""
     with (
-        patch("gcp_logger.is_running_on_cloud") as mock_is_cloud,
-        patch("gcp_logger.logger") as mock_logger,
+        patch("gclog.gclog.is_running_on_cloud") as mock_is_cloud,
+        patch("gclog.gclog.logger") as mock_logger,
     ):
         mock_is_cloud.return_value = False
 
@@ -355,7 +355,7 @@ def test_custom_log_level(log_level):
 # Test get_logger function
 def test_get_logger_returns_logger():
     """Test that get_logger returns a logger instance."""
-    with patch("gcp_logger.GCPLogger") as mock_gcp_logger:
+    with patch("gclog.gclog.GCPLogger") as mock_gcp_logger:
         mock_gcp_logger.return_value = "mock_logger"
 
         result = get_logger()

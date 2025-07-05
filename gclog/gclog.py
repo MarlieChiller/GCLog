@@ -94,7 +94,19 @@ def local_sink(message: Message):
 
 
 # Format string for local logging
-LOCAL_FORMAT = "<g>{time:YYYY-MM-DD HH:mm:ss.SSS}</g> | <level>{level: <8}</level> | <c>{name}</c>:<c>{function}</c>:<c>{line}</c> - <level>{message}</level> | <y>{extra}</y>"
+def format_record(record):
+    """Custom formatter that conditionally includes extra data."""
+    base_format = "<g>{time:YYYY-MM-DD HH:mm:ss.SSS}</g> | <level>{level: <8}</level> | <c>{name}</c>:<c>{function}</c>:<c>{line}</c> - <level>{message}</level>"
+    
+    # Check if there's any extra data (excluding the nested 'extra' key from log calls)
+    extra_data = dict(record["extra"])
+    if "extra" in extra_data:
+        extra_data.update(extra_data.pop("extra"))
+    
+    if extra_data:
+        return base_format + " | <y>{extra}</y>\n"
+    else:
+        return base_format + "\n"
 
 
 class GCPLogger:
@@ -108,7 +120,7 @@ class GCPLogger:
         backtrace: bool = True,
         diagnose: bool = True,
         colorize: bool = True,
-        fmt: str = LOCAL_FORMAT,
+        fmt = format_record,
     ) -> logger:
         if cls._instance is None:
             with cls._lock:
@@ -124,7 +136,7 @@ class GCPLogger:
         backtrace: bool = True,
         diagnose: bool = True,
         colorize: bool = True,
-        fmt: str = LOCAL_FORMAT,
+        fmt = format_record,
     ) -> None:
         """Configure the logger with appropriate handlers."""
         if cls._configured:

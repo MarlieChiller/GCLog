@@ -1,5 +1,5 @@
 import pytest
-from gcp_logger import GCPLogger
+from gclog import GCPLogger
 
 
 @pytest.fixture(autouse=True)
