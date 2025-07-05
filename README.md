@@ -1,6 +1,18 @@
 # GCP Logger
 
+[![Tests](https://github.com/USERNAME/gcp-logger/workflows/Tests/badge.svg)](https://github.com/USERNAME/gcp-logger/actions)
+[![codecov](https://codecov.io/gh/USERNAME/gcp-logger/branch/main/graph/badge.svg)](https://codecov.io/gh/USERNAME/gcp-logger)
+[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
+[![PyPI version](https://badge.fury.io/py/gcp-logger.svg)](https://badge.fury.io/py/gcp-logger)
+
 A lightweight, production-ready logging package for Google Cloud Platform applications. Built on top of [loguru](https://github.com/Delgan/loguru), it automatically detects GCP environments and provides structured JSON logging for cloud services while maintaining human-readable logs for local development.
+
+## Why?
+
+I found that my logs in a fastapi app were using the Google Cloud Platforms' (GCP) default log level irrespective of the
+actual log level that was being emitted by the app itself. This meant my GCP logs were reporting things incorrectly, 
+decreasing visibility and making it harder to debug issues. This issue came up time and again, and I didn't want to have 
+to write a log formatter for every service, so I wrote this package to fix this problem once and for all.
 
 ## Features
 
@@ -61,7 +73,7 @@ except Exception:
   "severity": "INFO",
   "message": "Application started",
   "time": "2025-01-15T10:30:45.123000",
-  "labels": {},
+  "extra": {},
   "file": {"name": "main.py", "path": "/app/main.py"},
   "function": "main",
   "line": 15,
@@ -139,7 +151,7 @@ The logger includes robust error handling:
 
 ## Requirements
 
-- Python 3.8+
+- Python 3.9+
 - loguru
 - requests (for GCP metadata server detection)
 

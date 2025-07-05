@@ -12,7 +12,7 @@ from loguru._handler import Message
 
 def is_running_on_cloud() -> bool:
     """Check if running on any Google Cloud Platform service.
-    
+
     Detects:
     - Cloud Run (K_REVISION)
     - Cloud Functions (FUNCTION_NAME)
@@ -20,41 +20,47 @@ def is_running_on_cloud() -> bool:
     - Cloud Run Jobs (CLOUD_RUN_JOB)
     - GKE (KUBERNETES_SERVICE_HOST)
     - Compute Engine (metadata server)
-    
+
     Returns:
         bool: True if running on any GCP service, False otherwise.
     """
     # Check environment variables for different GCP services
     gcp_env_vars = [
-        "K_REVISION",           # Cloud Run
-        "FUNCTION_NAME",        # Cloud Functions
-        "GAE_APPLICATION",      # App Engine
-        "CLOUD_RUN_JOB",       # Cloud Run Jobs
-        "KUBERNETES_SERVICE_HOST"  # GKE
+        "K_REVISION",  # Cloud Run
+        "FUNCTION_NAME",  # Cloud Functions
+        "GAE_APPLICATION",  # App Engine
+        "CLOUD_RUN_JOB",  # Cloud Run Jobs
+        "KUBERNETES_SERVICE_HOST",  # GKE
     ]
-    
+
     if any(var in os.environ for var in gcp_env_vars):
         return True
-    
+
     # Check for Compute Engine by trying to access metadata server
     try:
         response = requests.get(
             "http://metadata.google.internal/computeMetadata/v1/instance/id",
             headers={"Metadata-Flavor": "Google"},
-            timeout=1
+            timeout=1,
         )
         return response.status_code == 200
     except Exception:
         return False
 
 
-
-
 def serialize(record: Dict[str, Any]) -> str:
     """Serialize a loguru record to JSON for GCP logging."""
     exception = record.get("exception")
     trace = "".join(traceback.format_exception(*exception)) if exception else None
-    
+
+    # Handle loguru's extra data structure - merge bound data with extra data
+    extra_data = dict(record["extra"])
+    if "extra" in extra_data:
+        # Merge nested extra data from log call
+        nested_extra = extra_data.pop("extra")
+        if isinstance(nested_extra, dict):
+            extra_data.update(nested_extra)
+
     log_data = {
         "severity": record["level"].name,
         "message": record["message"],
@@ -68,7 +74,7 @@ def serialize(record: Dict[str, Any]) -> str:
         "process": {"id": record["process"].id, "name": record["process"].name},
         "thread": {"id": record["thread"].id, "name": record["thread"].name},
         "time": record["time"].isoformat(),
-        "labels": record["extra"],
+        "extra": extra_data,
     }
     return json.dumps(log_data)
 
@@ -96,16 +102,30 @@ class GCPLogger:
     _lock = Lock()
     _configured = False
 
-    def __new__(cls, level: str = os.getenv("LOG_LEVEL", "DEBUG")):
+    def __new__(
+        cls,
+        level: str = os.getenv("LOG_LEVEL", "DEBUG"),
+        backtrace: bool = True,
+        diagnose: bool = True,
+        colorize: bool = True,
+        fmt: str = LOCAL_FORMAT,
+    ) -> logger:
         if cls._instance is None:
             with cls._lock:
                 if cls._instance is None:
                     cls._instance = super().__new__(cls)
-                    cls._configure_logger(level)
+                    cls._configure_logger(level, backtrace, diagnose, colorize, fmt)
         return logger
 
     @classmethod
-    def _configure_logger(cls, level: str) -> None:
+    def _configure_logger(
+        cls,
+        level: str,
+        backtrace: bool = True,
+        diagnose: bool = True,
+        colorize: bool = True,
+        fmt: str = LOCAL_FORMAT,
+    ) -> None:
         """Configure the logger with appropriate handlers."""
         if cls._configured:
             return
@@ -121,10 +141,10 @@ class GCPLogger:
                 logger.add(
                     local_sink,
                     level=level,
-                    backtrace=True,
-                    diagnose=True,
-                    colorize=True,
-                    format=LOCAL_FORMAT,
+                    backtrace=backtrace,
+                    diagnose=diagnose,
+                    colorize=colorize,
+                    format=fmt,
                 )
             cls._configured = True
         except Exception:
@@ -135,7 +155,7 @@ class GCPLogger:
 
 def get_logger() -> logger:
     """Get a configured logger instance for GCP applications.
-    
+
     Returns:
         A loguru logger configured for GCP or local development.
     """
