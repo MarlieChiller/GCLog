@@ -3,7 +3,7 @@
 [![Tests](https://github.com/MarlieChiller/gcp_logger/workflows/Tests/badge.svg)](https://github.com/MarlieChiller/gcp_logger/actions)
 [![codecov](https://codecov.io/gh/MarlieChiller/GCLog/graph/badge.svg?token=O1ZHUDHDYU)](https://codecov.io/gh/MarlieChiller/GCLog)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
-[![PyPI version](https://badge.fury.io/py/gclog.svg)](https://badge.fury.io/py/gclog)
+[![PyPI version](https://img.shields.io/pypi/v/gclog.svg)](https://pypi.org/project/gclog/)
 
 A lightweight, production-ready logging package for Google Cloud Platform applications. Built on top of [loguru](https://github.com/Delgan/loguru), it automatically detects GCP environments and provides structured JSON logging for cloud services while maintaining human-readable logs for local development.
 

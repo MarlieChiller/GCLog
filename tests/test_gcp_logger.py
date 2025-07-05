@@ -478,3 +478,60 @@ def test_various_extra_data_types(extra_data):
     # Check extra data is in extra field
     for key, value in extra_data.items():
         assert data["extra"][key] == value
+
+
+# Test format_record function
+def test_format_record_without_extra_data():
+    """Test format_record function returns basic format when no extra data."""
+    from gclog.gclog import format_record
+    
+    record = {
+        "extra": {}
+    }
+    
+    result = format_record(record)
+    base_format = "<g>{time:YYYY-MM-DD HH:mm:ss.SSS}</g> | <level>{level: <8}</level> | <c>{name}</c>:<c>{function}</c>:<c>{line}</c> - <level>{message}</level>\n"
+    assert result == base_format
+
+
+def test_format_record_with_extra_data():
+    """Test format_record function includes extra data when present."""
+    from gclog.gclog import format_record
+    
+    record = {
+        "extra": {"user_id": "123", "action": "login"}
+    }
+    
+    result = format_record(record)
+    expected_format = "<g>{time:YYYY-MM-DD HH:mm:ss.SSS}</g> | <level>{level: <8}</level> | <c>{name}</c>:<c>{function}</c>:<c>{line}</c> - <level>{message}</level> | <y>{extra}</y>\n"
+    assert result == expected_format
+
+
+def test_format_record_with_nested_extra_data():
+    """Test format_record function properly handles nested extra data."""
+    from gclog.gclog import format_record
+    
+    record = {
+        "extra": {
+            "user_id": "123",
+            "extra": {"session_id": "abc", "ip": "192.168.1.1"}
+        }
+    }
+    
+    result = format_record(record)
+    expected_format = "<g>{time:YYYY-MM-DD HH:mm:ss.SSS}</g> | <level>{level: <8}</level> | <c>{name}</c>:<c>{function}</c>:<c>{line}</c> - <level>{message}</level> | <y>{extra}</y>\n"
+    assert result == expected_format
+
+
+def test_logger_already_configured():
+    """Test that configure method returns early when already configured."""
+    with patch("gclog.gclog.logger") as mock_logger:
+        # Set configured to True to trigger early return
+        GCPLogger._configured = True
+        
+        # Call configure method directly 
+        GCPLogger._configure_logger("INFO")
+        
+        # Should not call any logger methods due to early return
+        mock_logger.remove.assert_not_called()
+        mock_logger.add.assert_not_called()
