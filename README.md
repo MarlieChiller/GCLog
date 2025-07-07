@@ -19,6 +19,7 @@ to write a log formatter for every service, so I wrote this package to fix this 
 - 🚀 **Auto-detection** of all major GCP services (Cloud Run, Cloud Functions, App Engine, GKE, Compute Engine)
 - 📊 **Structured JSON logging** for GCP with proper severity levels
 - 🎨 **Beautiful colored logs** for local development
+- 🔄 **Request-scoped contextual logging** with automatic async propagation
 - ⚡ **Thread-safe singleton** pattern for consistent logging across your application
 - 🛡️ **Zero external dependencies** beyond loguru and requests
 - 🧪 **Fully tested** with comprehensive test coverage
@@ -111,6 +112,76 @@ logger.info("User action", extra={
 })
 ```
 
+## Contextual Logging
+
+GCLog supports request-scoped contextual logging that automatically propagates context across async boundaries. This is particularly useful for web applications where you want request-specific data (like user IDs, request IDs, etc.) to appear in all log messages for that request.
+
+### Basic Contextual Logging
+
+```python
+from gclog import get_logger, set_contextual_logger, clear_contextual_logger
+
+# Create a logger with bound context
+log = get_logger()
+contextual_logger = log.bind(user_id="123", request_id="req_456")
+
+# Set it as the contextual logger for this request
+set_contextual_logger(contextual_logger)
+
+# Now all calls to get_logger() will return the contextual logger
+def some_function():
+    logger = get_logger()  # Automatically gets the contextual logger
+    logger.info("Processing data")  # Includes user_id and request_id
+
+# Don't forget to clear context when done
+clear_contextual_logger()
+```
+
+### FastAPI Middleware Example
+
+```python
+from fastapi import Request
+from starlette.middleware.base import BaseHTTPMiddleware
+from gclog import get_logger, set_contextual_logger, clear_contextual_logger
+import uuid
+
+class LoggingMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        # Extract relevant context from the request
+        request_id = request.headers.get('x-request-id', str(uuid.uuid4()))
+        
+        # Create contextual logger with request-level information
+        base_logger = get_logger()
+        contextual_logger = base_logger.bind(
+            request_id=request_id,
+            path=request.url.path,
+            method=request.method
+        )
+        set_contextual_logger(contextual_logger)
+        
+        try:
+            response = await call_next(request)
+            return response
+        finally:
+            clear_contextual_logger()
+
+# In your endpoints, add specific context as needed
+@app.get("/users/{user_id}/data")
+def get_user_data(user_id: str):
+    log = get_logger()
+    # Add endpoint-specific context
+    log = log.bind(user_id=user_id)
+    log.info("Fetching user data")  # Includes request_id, path, method, user_id
+    return {"data": "..."}
+```
+
+### Key Benefits
+
+- **Automatic Propagation**: Context flows through async function calls without manual passing
+- **Request Isolation**: Each concurrent request maintains separate context
+- **Zero Code Changes**: Existing `get_logger()` calls automatically get contextual logger
+- **Clean Architecture**: No need to thread context through function parameters
+
 ## Advanced Usage
 
 ### Manual Environment Detection
@@ -176,6 +247,15 @@ pytest tests/ -v
 MIT License - see LICENSE file for details.
 
 ## Changelog
+
+### v0.2.0
+- **feat**: Add contextual logger support for request-scoped logging
+- **feat**: New functions `set_contextual_logger()` and `clear_contextual_logger()`
+- **feat**: Automatic async context propagation using Python's `contextvars`
+- **feat**: Request isolation for concurrent requests
+- **enhancement**: `get_logger()` now returns contextual logger when available
+- **docs**: Add comprehensive FastAPI middleware example
+- **test**: Full test coverage including async isolation tests
 
 ### v0.1.1
 - **feat**: Add conditional extra data formatting for cleaner logs
