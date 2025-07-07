@@ -11,7 +11,7 @@ from loguru import logger
 from loguru._handler import Message
 
 # Context variable to store the current request's logger
-_contextual_logger: ContextVar[Optional[logger]] = ContextVar('contextual_logger', default=None)
+_contextual_logger = ContextVar('contextual_logger', default=None)
 
 
 def is_running_on_cloud() -> bool:
@@ -169,7 +169,7 @@ class GCPLogger:
             logger.exception("Failed to configure logger")
 
 
-def set_contextual_logger(bound_logger: logger) -> None:
+def set_contextual_logger(bound_logger) -> None:
     """Set a bound logger for the current request context."""
     _contextual_logger.set(bound_logger)
 
@@ -179,7 +179,7 @@ def clear_contextual_logger() -> None:
     _contextual_logger.set(None)
 
 
-def get_logger() -> logger:
+def get_logger():
     """Get a configured logger instance for GCP applications.
 
     Returns the contextual logger if set, otherwise the base logger.
