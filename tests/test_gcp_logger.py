@@ -14,6 +14,8 @@ from gclog import (
     serialize,
     gcp_sink,
     local_sink,
+    set_contextual_logger,
+    clear_contextual_logger,
 )
 
 
@@ -535,3 +537,181 @@ def test_logger_already_configured():
         # Should not call any logger methods due to early return
         mock_logger.remove.assert_not_called()
         mock_logger.add.assert_not_called()
+
+
+# Test contextual logger functionality
+def test_contextual_logger_set_and_get():
+    """Test that contextual logger can be set and retrieved."""
+    from loguru import logger
+    
+    # Create a bound logger
+    bound_logger = logger.bind(user_id="123", session_id="abc")
+    
+    # Set contextual logger
+    set_contextual_logger(bound_logger)
+    
+    # Get logger should return the contextual logger
+    result = get_logger()
+    assert result is bound_logger
+    
+    # Clear context
+    clear_contextual_logger()
+    
+    # Now should return base logger
+    with patch("gclog.gclog.GCPLogger") as mock_gcp_logger:
+        mock_gcp_logger.return_value = "base_logger"
+        result = get_logger()
+        assert result == "base_logger"
+
+
+def test_contextual_logger_clear():
+    """Test that clearing contextual logger works correctly."""
+    from loguru import logger
+    
+    # Set contextual logger
+    bound_logger = logger.bind(test_key="test_value")
+    set_contextual_logger(bound_logger)
+    
+    # Verify it's set
+    assert get_logger() is bound_logger
+    
+    # Clear it
+    clear_contextual_logger()
+    
+    # Should return None from context
+    with patch("gclog.gclog.GCPLogger") as mock_gcp_logger:
+        mock_gcp_logger.return_value = "base_logger"
+        result = get_logger()
+        assert result == "base_logger"
+
+
+def test_contextual_logger_isolation():
+    """Test that contextual logger isolates between different contexts."""
+    import asyncio
+    from loguru import logger
+    
+    results = []
+    
+    async def context_task(task_id, user_id):
+        # Set different contextual loggers in each task
+        bound_logger = logger.bind(task_id=task_id, user_id=user_id)
+        set_contextual_logger(bound_logger)
+        
+        # Simulate some async work
+        await asyncio.sleep(0.01)
+        
+        # Get logger should return the correct contextual logger
+        result_logger = get_logger()
+        results.append((task_id, result_logger is bound_logger))
+    
+    async def run_concurrent_tasks():
+        # Run multiple tasks concurrently
+        tasks = [
+            context_task(1, "user_123"),
+            context_task(2, "user_456"),
+            context_task(3, "user_789")
+        ]
+        await asyncio.gather(*tasks)
+    
+    # Run the test
+    asyncio.run(run_concurrent_tasks())
+    
+    # All tasks should have gotten their own contextual logger
+    assert len(results) == 3
+    for task_id, is_correct_logger in results:
+        assert is_correct_logger, f"Task {task_id} did not get correct contextual logger"
+
+
+def test_contextual_logger_with_bound_context():
+    """Test that contextual logger preserves bound context in log output."""
+    from loguru import logger
+    
+    # Create bound logger with context
+    bound_logger = logger.bind(user_id="123", conversation_id="abc")
+    set_contextual_logger(bound_logger)
+    
+    # Get logger should return the bound logger with context
+    contextual_logger = get_logger()
+    
+    # Capture log output
+    captured_records = []
+    
+    def capture_record(message):
+        captured_records.append(message.record)
+    
+    contextual_logger.add(capture_record, level="DEBUG")
+    contextual_logger.info("Test message with context")
+    contextual_logger.remove()
+    
+    # Should have captured one record
+    assert len(captured_records) == 1
+    
+    # Serialize the record and check context is preserved
+    serialized = serialize(captured_records[0])
+    data = json.loads(serialized)
+    
+    assert data["extra"]["user_id"] == "123"
+    assert data["extra"]["conversation_id"] == "abc"
+    
+    # Clear context
+    clear_contextual_logger()
+
+
+def test_contextual_logger_without_context():
+    """Test that get_logger returns base logger when no context is set."""
+    # Make sure no context is set
+    clear_contextual_logger()
+    
+    with patch("gclog.gclog.GCPLogger") as mock_gcp_logger:
+        mock_gcp_logger.return_value = "base_logger"
+        
+        result = get_logger()
+        assert result == "base_logger"
+        mock_gcp_logger.assert_called_once()
+
+
+def test_contextual_logger_async_propagation():
+    """Test that contextual logger propagates across async boundaries."""
+    import asyncio
+    from loguru import logger
+    
+    captured_records = []
+    
+    def capture_record(message):
+        captured_records.append(message.record)
+    
+    async def inner_function():
+        # This should get the contextual logger set in outer function
+        inner_logger = get_logger()
+        inner_logger.add(capture_record, level="DEBUG")
+        inner_logger.info("Inner function log")
+        inner_logger.remove()
+    
+    async def outer_function():
+        # Set contextual logger
+        bound_logger = logger.bind(request_id="req_123")
+        set_contextual_logger(bound_logger)
+        
+        # Log from outer function
+        outer_logger = get_logger()
+        outer_logger.add(capture_record, level="DEBUG")
+        outer_logger.info("Outer function log")
+        outer_logger.remove()
+        
+        # Call inner function - context should propagate
+        await inner_function()
+        
+        # Clear context
+        clear_contextual_logger()
+    
+    # Run the test
+    asyncio.run(outer_function())
+    
+    # Should have captured two records
+    assert len(captured_records) == 2
+    
+    # Both should have the same context
+    for record in captured_records:
+        serialized = serialize(record)
+        data = json.loads(serialized)
+        assert data["extra"]["request_id"] == "req_123"

@@ -2,12 +2,16 @@ import json
 import os
 import sys
 import traceback
+from contextvars import ContextVar
 from threading import Lock
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 import requests
 from loguru import logger
 from loguru._handler import Message
+
+# Context variable to store the current request's logger
+_contextual_logger: ContextVar[Optional[logger]] = ContextVar('contextual_logger', default=None)
 
 
 def is_running_on_cloud() -> bool:
@@ -165,13 +169,25 @@ class GCPLogger:
             logger.exception("Failed to configure logger")
 
 
+def set_contextual_logger(bound_logger: logger) -> None:
+    """Set a bound logger for the current request context."""
+    _contextual_logger.set(bound_logger)
+
+
+def clear_contextual_logger() -> None:
+    """Clear the contextual logger."""
+    _contextual_logger.set(None)
+
+
 def get_logger() -> logger:
     """Get a configured logger instance for GCP applications.
 
-    Returns:
-        A loguru logger configured for GCP or local development.
+    Returns the contextual logger if set, otherwise the base logger.
     """
+    contextual = _contextual_logger.get()
+    if contextual is not None:
+        return contextual
     return GCPLogger()
 
 
-__all__ = ["get_logger", "GCPLogger"]
+__all__ = ["get_logger", "GCPLogger", "set_contextual_logger", "clear_contextual_logger"]

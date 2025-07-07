@@ -6,7 +6,9 @@ from .gclog import (
     serialize,
     gcp_sink,
     local_sink,
+    set_contextual_logger,
+    clear_contextual_logger,
 )
 
 __version__ = "0.1.1"
-__all__ = ["get_logger", "GCPLogger"]
+__all__ = ["get_logger", "GCPLogger", "set_contextual_logger", "clear_contextual_logger"]
